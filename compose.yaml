@@ -1,0 +1,58 @@
+name: muse
+services:
+  muse-box:
+    build: .
+    container_name: muse-box
+    hostname: muse-box
+    restart: unless-stopped
+    cap_drop:
+      - ALL
+    # Minimum set added back (measured necessity): with ALL dropped, sshd cannot setuid to the
+    # muse user and the entrypoint cannot chown anything (su/chown -> "Operation not permitted").
+    # These are the standard sshd identity/ownership caps only; NET_ADMIN/SYS_ADMIN etc. stay dropped.
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETUID
+      - SETGID
+      - SYS_CHROOT
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m
+      - /run:size=16m
+      - /home/muse:size=16m
+    volumes:
+      - muse-work:/work
+      - muse-tsstate:/var/lib/tailscale
+      - ./config:/config:ro
+      - type: bind
+        source: /home/nb3/cloud/my_vault/kvm/sshfs
+        target: /shared
+        bind:
+          propagation: rslave
+    networks:
+      - muse-net
+    mem_limit: 1g
+    cpus: 1.0
+    pids_limit: 256
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+volumes:
+  muse-work:
+  muse-tsstate:
+networks:
+  muse-net:
+    name: muse-net
+    driver: bridge
+    ipam:
+      config:
+        # NOTE: design said 172.30.0.0/24, but 172.30.0.0/16 is already used by mt5-new_default,
+        # so muse-net takes the free 172.31.0.0/24 instead (gateway 172.31.0.1).
+        - subnet: 172.31.0.0/24
+          gateway: 172.31.0.1

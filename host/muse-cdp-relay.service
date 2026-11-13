@@ -1,0 +1,10 @@
+[Unit]
+Description=CDP relay for muse-box (172.31.0.1:9222 -> 127.0.0.1:9222, muse-net only)
+
+[Service]
+ExecStart=/usr/bin/python3 /home/nb3/docker/muse/host/relay.py
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=default.target
